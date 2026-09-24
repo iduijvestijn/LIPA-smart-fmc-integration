@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/.venv": true,
+        "**/*.egg-info": true,
+        "**/__pycache__": true,
+        "**/.git": true,
+        "**/.gitignore": true
+        
+    }
+}
