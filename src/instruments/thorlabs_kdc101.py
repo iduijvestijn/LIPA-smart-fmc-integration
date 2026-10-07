@@ -10,10 +10,9 @@ from System import Decimal
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\ThorLabs.MotionControl.KCube.DCServoCLI.dll")
-
-from Thorlabs.MotionControl.DeviceManagerCLI import DeviceManagerCLI
-from Thorlabs.MotionControl.GenericMotorCLI import DeviceConfiguration
-from Thorlabs.MotionControl.KCube.DCServoCLI import KCubeDCServo
+from Thorlabs.MotionControl.DeviceManagerCLI import *
+from Thorlabs.MotionControl.GenericMotorCLI import *
+from Thorlabs.MotionControl.KCube.DCServoCLI import *
 
 class KDC101:
     def __init__(self, serial_no, motor_type="Z812B"):
@@ -27,7 +26,7 @@ class KDC101:
         print(f"Connecting to KDC101 ({self.serial_no})")
         DeviceManagerCLI.BuildDeviceList()
 
-        self.device = KCubeDCServo.CreateKCubeDSServo(self.serial_no)
+        self.device = KCubeDCServo.CreateKCubeDCServo(self.serial_no)
         self.device.Connect(self.serial_no)
         time.sleep(0.25)
 
@@ -60,6 +59,15 @@ class KDC101:
         target_decimal = Decimal(float(position_mm))
         self.device.MoveTo(target_decimal, 10000)
         time.sleep(0.2)
+
+    def set_velocity(self, max_velocity, acceleration):
+        """Sets the maximum velocity and acceleration of the stage."""
+        print(f"Setting velocity to {max_velocity} and acceleration to {acceleration}...")
+        vel_params = self.device.GetVelocityParams()
+        vel_params.MaxVelocity = Decimal(float(max_velocity))
+        vel_params.Acceleration = Decimal(float(acceleration))
+        self.device.SetVelocityParams(vel_params)
+        time.sleep(0.1)
         
     def disconnect(self):
         """Safely closes the connection to the hardware."""
