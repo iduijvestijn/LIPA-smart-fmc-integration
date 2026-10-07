@@ -1,10 +1,25 @@
 {
     "files.exclude": {
         "**/.venv": true,
+        "**/lipa": true,
         "**/*.egg-info": true,
         "**/__pycache__": true,
         "**/.git": true,
         "**/.gitignore": true
         
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python.defaultInterpreterPath": "${workspaceFolder}\\lipa\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": false,
+    "terminal.integrated.profiles.windows": {
+        "PowerShell (lipa)": {
+            "path": "${env:WINDIR}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "args": [
+                "-NoExit",
+                "-Command",
+                "$env:VIRTUAL_ENV='C:\\Users\\W\\Desktop\\MASTERRRRRRR\\AA THESIS\\code\\LIPA-smart-fmc-integration\\lipa'; $env:PATH=\"$env:VIRTUAL_ENV\\Scripts;$env:PATH\"; function global:prompt { Write-Host '(lipa) ' -ForegroundColor Green -NoNewline; \"PS $($executionContext.SessionState.Path.CurrentLocation)> \" }"
+            ]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell (lipa)"
 }
