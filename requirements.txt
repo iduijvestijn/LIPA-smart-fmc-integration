@@ -1,6 +1,7 @@
 cffi==2.1.1
 clr_loader==0.3.1
 h5py==3.16.0
+matplotlib==3.11.2
 numpy==2.2.6
 PIPython==2.11.0.6
 pycparser==3.0
