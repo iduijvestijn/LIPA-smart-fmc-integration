@@ -46,8 +46,11 @@ class DSOX2004A:
         self.device.write(f":WAVeform:SOURce CHANnel{channel}")
         self.device.write(":WAVeform:FORMat WORD")
         self.device.write(":WAVeform:BYTeorder LSBFirst")
-        self.device.write(":WAVeform:POINts:MODE RAW")
-        self.device.write(":WAVeform:POINts MAX")
+
+
+        # self.device.write(":WAVeform:POINts:MODE RAW")
+        # self.device.write(":WAVeform:POINts MAX")
+        self.device.write(":WAVeform:POINts:MODE NORMal")
     
     def arm_single_shot(self, channel=1):
         """Clears memory, arms the trigger, and forces the scope to wait."""
@@ -86,3 +89,8 @@ class DSOX2004A:
         x = xorig + xincr * np.arange(len(raw_data))
         y = (raw_data - yref) * yinc + yorig
         return x, y
+
+    def close(self):
+        """Releases the VISA resource."""
+        self.device.close()
+        self.rm.close()

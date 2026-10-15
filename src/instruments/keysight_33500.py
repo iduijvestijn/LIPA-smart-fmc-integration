@@ -69,3 +69,8 @@ class AWG33500B:
         for tc in centers:
             y += peak * np.exp(-0.5 * ((t - tc - t_start) / sigma) ** 2)
         return y.astype(np.float32)
+
+    def close(self):
+        """Releases the VISA resource."""
+        self.device.close()
+        self.rm.close()
