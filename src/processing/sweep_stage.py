@@ -41,7 +41,6 @@ def main():
         print(f"An error occurred during the sweep sequence: {e}")
         
     finally:
-        # Ensure hardware is safely released even if the script crashes
         stage.disconnect()
 
 if __name__ == "__main__":

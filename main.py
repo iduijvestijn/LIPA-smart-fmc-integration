@@ -42,6 +42,7 @@ from src.instruments.keysight_dsox import DSOX2004A
 
 def main():
     # 1. Initialize Instruments
+    #stage = KDC101(serial_no= "27266437")
     awg = AWG33500B(resource_string="USB0::0x0957::0x2C07::MY62000789::0::INSTR")
     scope = DSOX2004A(resource_string="USB0::0x0957::0x179A::MY62160304::0::INSTR")
 

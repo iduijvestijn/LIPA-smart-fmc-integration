@@ -19,8 +19,8 @@ class AWG33500B:
         self.device.write_termination = '\n'
         self.device.read_termination = '\n'
 
-        self.device.write("*CLS")  
-        self.device.write("*RST")  
+        self.device.write("*CLS")  #clear status
+        self.device.write("*RST")  #reset instrument
 
         idn = self.device.query("*IDN?")
         print(f"Connected to generator: {idn.strip()}")
