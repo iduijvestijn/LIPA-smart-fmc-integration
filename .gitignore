@@ -1,3 +1,6 @@
 .venv/
 pyvenv.cfg
 .vscode/settings.json
+__pycache__/
+*.pyc
+*.pyo
