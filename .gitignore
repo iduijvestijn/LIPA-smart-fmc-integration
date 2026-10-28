@@ -4,3 +4,4 @@ pyvenv.cfg
 __pycache__/
 *.pyc
 *.pyo
+src/lipa_project.egg-info/
