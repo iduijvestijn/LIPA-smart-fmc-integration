@@ -2,8 +2,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt, hilbert, find_peaks
-from src.instruments.keysight_33500 import AWG33500B
-from src.instruments.keysight_dsox import DSOX2004A
+from instruments.keysight_33500 import AWG33500B
+from instruments.keysight_dsox import DSOX2004A
 
 def characterize_sample(velocity_m_s=6320.0):
     awg = AWG33500B(resource_string="USB0::0x0957::0x2C07::MY62000789::0::INSTR")

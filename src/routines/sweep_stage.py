@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from src.instruments.thorlabs_kdc101 import KDC101
+from instruments.thorlabs_kdc101 import KDC101
 
 def main():
     # Replace with the actual serial number printed on your K-Cube

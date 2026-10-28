@@ -1,7 +1,7 @@
 import ctypes
 import numpy as np
-from src.instruments.api.pyspcm import *
-from src.instruments.api.spcm_tools import *
+from instruments.api.pyspcm import *
+from instruments.api.spcm_tools import *
 
 class SpectrumAWG:
     def __init__(self, resource_path=b'/dev/spcm1'):

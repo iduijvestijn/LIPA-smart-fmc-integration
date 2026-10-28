@@ -1,13 +1,8 @@
-import sys
-import os
-#force Python to add your main LIPA folder to its path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 import ctypes
 import numpy as np
 
-from src.instruments.api.pyspcm import *
-from src.instruments.api.spcm_tools import *
+from instruments.api.pyspcm import *
+from instruments.api.spcm_tools import *
 
 
 def check_driver_result(h_card, result, operation):

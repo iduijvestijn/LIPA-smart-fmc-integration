@@ -7,9 +7,9 @@ import time
 import numpy as np
 
 # Import the new object-oriented hardware abstraction layers
-from src.instruments.keysight_33500 import AWG33500B
-from src.instruments.keysight_dsox import DSOX2004A
-from src.instruments.thorlabs_kdc101 import KDC101
+from instruments.keysight_33500 import AWG33500B
+from instruments.keysight_dsox import DSOX2004A
+from instruments.thorlabs_kdc101 import KDC101
 
 def main():
     # --- 1. Define Parameters ---

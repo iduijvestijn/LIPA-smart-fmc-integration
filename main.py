@@ -7,8 +7,8 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from PIL import Image
 
 # from src.instruments.thorlabs_kdc101 import KDC101
-from src.instruments.keysight_33500 import AWG33500B
-from src.instruments.keysight_dsox import DSOX2004A
+from instruments.keysight_33500 import AWG33500B
+from instruments.keysight_dsox import DSOX2004A
 
 
 
