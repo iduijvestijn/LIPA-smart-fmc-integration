@@ -1,59 +1,65 @@
-import ctypes
 import numpy as np
-from instruments.api.pyspcm import *
-from instruments.api.spcm_tools import *
+import spcm
+from spcm import units
 
 class SpectrumDAQ:
-    def __init__(self, resource_path=b'/dev/spcm0'):
-        self.hCard = spcm_hOpen(ctypes.create_string_buffer(resource_path))[cite: 107]
-        if self.hCard is None:
-            raise ConnectionError(f"Could not open DAQ at {resource_path}")
+    def __init__(self, resource_path='/dev/spcm1'):
+        if isinstance(resource_path, bytes):
+            resource_path = resource_path.decode('utf-8')
             
-        self.pvBuffer = None
-        self.buffer_size = 0
-        self.memsize = 0
-    def configure(self, sample_rate_hz, amplitude_mv, memsize):
-        # Set to Single Replay mode
-        spcm_dwSetParam_i32(self.hCard, SPC_CARDMODE, SPC_REP_STD_SINGLE)[cite: 105]
-        spcm_dwSetParam_i64(self.hCard, SPC_CHENABLE, 1)
-        spcm_dwSetParam_i64(self.hCard, SPC_MEMSIZE, memsize)
-        spcm_dwSetParam_i64(self.hCard, SPC_SAMPLERATE, int(sample_rate_hz))
+        self.card = spcm.Card(resource_path)
+        self.card.__enter__()
         
-        # Configure output channel
-        spcm_dwSetParam_i64(self.hCard, SPC_AMP0, int(amplitude_mv))
-        spcm_dwSetParam_i64(self.hCard, SPC_ENABLEOUT0, 1)
+        self.data_transfer = None
+        self.channels = None
 
-        # Set Software Trigger (Master) and enable Trigger Output to trigger the DAQ
-        spcm_dwSetParam_i32(self.hCard, SPC_TRIG_ORMASK, SPC_TMASK_SOFTWARE)
-        spcm_dwSetParam_i32(self.hCard, SPC_TRIGGEROUT, 1)
-
-    def load_waveform(self, waveform_array):
-        # Allocate page-aligned memory for DMA transfer
-        lBytesPerSample = int32(0)
-        spcm_dwGetParam_i32(self.hCard, SPC_MIINST_BYTESPERSAMPLE, ctypes.byref(lBytesPerSample))
+    def configure_trigger_receiver(self, sample_rate_hz, ch0_mv, ch1_mv, record_time_s, post_trigger_s, trigger_level_mv):
+        self.card.card_mode(spcm.SPC_REC_STD_SINGLE)
+        self.card.timeout(5 * units.s)
         
-        self.buffer_size = uint64(len(waveform_array) * lBytesPerSample.value)
-        self.pvBuffer = pvAllocMemPageAligned(self.buffer_size.value)[cite: 103, 104]
-        pnBuffer = ctypes.cast(self.pvBuffer, ptr16)
+        clock = spcm.Clock(self.card)
+        clock.mode(spcm.SPC_CM_INTPLL)
+        clock.sample_rate(sample_rate_hz * units.Hz)
         
-        # Get DAC Max Value for scaling
-        lMaxDACValue = int32(0)
-        spcm_dwGetParam_i32(self.hCard, SPC_MIINST_MAXADCVALUE, ctypes.byref(lMaxDACValue))
-        max_val = lMaxDACValue.value - 1
+        self.channels = spcm.Channels(self.card, card_enable=spcm.CHANNEL0 | spcm.CHANNEL1)
+        self.channels[0].amp(ch0_mv * units.mV)
+        self.channels[1].amp(ch1_mv * units.mV)
+        self.channels.termination(1)  # 50 ohms termination
         
-        # Scale and load numpy array into ctypes buffer
-        normalized_wave = (waveform_array / np.max(np.abs(waveform_array))) * max_val
-        for i, val in enumerate(normalized_wave):
-            pnBuffer[i] = int(val)
+        # Trigger on DAQ CH0
+        trigger = spcm.Trigger(self.card)
+        trigger.or_mask(spcm.SPC_TMASK_NONE)
+        trigger.and_mask(spcm.SPC_TMASK_NONE)
+        trigger.ch_or_mask0(spcm.SPC_TMASK0_CH0)
+        trigger.ch_and_mask0(0)
+        trigger.ch_mode(self.channels[0], spcm.SPC_TM_POS)
+        
+        # APPLY THE EXACT THRESHOLD IN MILLIVOLTS
+        trigger.ch_level0(self.channels[0], trigger_level_mv * units.mV)
+        
+        self.data_transfer = spcm.DataTransfer(self.card)
+        self.data_transfer.duration(record_time_s * units.s, post_trigger_duration=post_trigger_s * units.s)
 
-        # Transfer to card memory
-        spcm_dwDefTransfer_i64(self.hCard, SPCM_BUF_DATA, SPCM_DIR_PCTOCARD, int32(0), self.pvBuffer, uint64(0), self.buffer_size)
-        spcm_dwSetParam_i32(self.hCard, SPC_M2CMD, M2CMD_DATA_STARTDMA | M2CMD_DATA_WAITDMA)
+    def read_data(self):
+        # Pull the data from the card to the PC RAM
+        self.data_transfer.start_buffer_transfer(spcm.M2CMD_DATA_STARTDMA)
+        
+        # Convert internal binary to actual Voltage arrays
+        ch0_data = self.channels[0].convert_data(self.data_transfer.buffer[self.channels[0], :], units.V)
+        ch1_data = self.channels[1].convert_data(self.data_transfer.buffer[self.channels[1], :], units.V)
+        
+        # Strip the pint units so standard NumPy arrays are returned
+        ch0_v = getattr(ch0_data, 'magnitude', ch0_data)
+        ch1_v = getattr(ch1_data, 'magnitude', ch1_data)
+        
+        return ch0_v, ch1_v
 
-    def fire(self):
-        # Trigger the burst
-        spcm_dwSetParam_i32(self.hCard, SPC_M2CMD, M2CMD_CARD_START | M2CMD_CARD_ENABLETRIGGER)
+    def arm_and_wait(self):
+        self.card.start(spcm.M2CMD_CARD_ENABLETRIGGER)
+
+    def wait_ready(self):
+        self.card.cmd(spcm.M2CMD_CARD_WAITREADY)
 
     def close(self):
-        if self.hCard:
-            spcm_vClose(self.hCard)    
+        if self.card:
+            self.card.__exit__(None, None, None)
