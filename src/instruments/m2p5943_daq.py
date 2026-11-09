@@ -13,7 +13,7 @@ class SpectrumDAQ:
         self.data_transfer = None
         self.channels = None
 
-    def configure_trigger_receiver(self, sample_rate_hz, ch0_mv, ch1_mv, record_time_s, post_trigger_s, trigger_level_mv):
+    def configure_trigger_receiver(self, sample_rate_hz, ch0_v, ch1_v, record_time_s, post_trigger_s, trigger_level_v):
         self.card.card_mode(spcm.SPC_REC_STD_SINGLE)
         self.card.timeout(5 * units.s)
         
@@ -22,8 +22,8 @@ class SpectrumDAQ:
         clock.sample_rate(sample_rate_hz * units.Hz)
         
         self.channels = spcm.Channels(self.card, card_enable=spcm.CHANNEL0 | spcm.CHANNEL1)
-        self.channels[0].amp(ch0_mv * units.mV)
-        self.channels[1].amp(ch1_mv * units.mV)
+        self.channels[0].amp(ch0_v * units.V)
+        self.channels[1].amp(ch1_v * units.V)
         self.channels.termination(1)  # 50 ohms termination
         
         # Trigger on DAQ CH0
@@ -35,7 +35,7 @@ class SpectrumDAQ:
         trigger.ch_mode(self.channels[0], spcm.SPC_TM_POS)
         
         # APPLY THE EXACT THRESHOLD IN MILLIVOLTS
-        trigger.ch_level0(self.channels[0], trigger_level_mv * units.mV)
+        trigger.ch_level0(self.channels[0], trigger_level_v * units.V)
         
         self.data_transfer = spcm.DataTransfer(self.card)
         self.data_transfer.duration(record_time_s * units.s, post_trigger_duration=post_trigger_s * units.s)

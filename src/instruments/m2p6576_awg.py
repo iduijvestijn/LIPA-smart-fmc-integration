@@ -11,7 +11,7 @@ class SpectrumAWG:
         self.card = spcm.Card(resource_path)
         self.card.__enter__() # Open the connection
         
-    def configure(self, sample_rate_hz, amplitude_mv, memsize):
+    def configure(self, sample_rate_hz, amplitude_v, memsize):
         self.card.card_mode(spcm.SPC_REP_STD_SINGLE)
         self.card.loops(1)
         
@@ -21,7 +21,7 @@ class SpectrumAWG:
         
         channels = spcm.Channels(self.card, card_enable=spcm.CHANNEL0)
         channels.enable(True)
-        channels.amp(amplitude_mv * units.mV)
+        channels.amp(amplitude_v * units.V)
         
         trigger = spcm.Trigger(self.card)
         trigger.or_mask(spcm.SPC_TMASK_SOFTWARE)
@@ -33,7 +33,7 @@ class SpectrumAWG:
         """
         # Hardcode 5000 mV (5V) to satisfy both the TRUMPF laser logic requirement 
         # and the S&B digitizer threshold requirement.
-        self.configure(sample_rate_hz=sample_rate_hz, amplitude_mv=5000, memsize=0)
+        self.configure(sample_rate_hz=sample_rate_hz, amplitude_v=5 * units.V, memsize=0)
         
         # Load the block pulse geometry into the card's memory
         self.load_block_pulse(pulse_width_s, total_duration_s, sample_rate_hz)
