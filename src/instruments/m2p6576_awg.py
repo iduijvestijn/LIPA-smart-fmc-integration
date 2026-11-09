@@ -26,6 +26,18 @@ class SpectrumAWG:
         trigger = spcm.Trigger(self.card)
         trigger.or_mask(spcm.SPC_TMASK_SOFTWARE)
 
+    def laser_trigger(self, pulse_width_s, total_duration_s, sample_rate_hz):
+        """
+        Configures and loads a 5V TTL-compatible block pulse to trigger 
+        the TRUMPF laser and the Sound & Bright digitizer.
+        """
+        # Hardcode 5000 mV (5V) to satisfy both the TRUMPF laser logic requirement 
+        # and the S&B digitizer threshold requirement.
+        self.configure(sample_rate_hz=sample_rate_hz, amplitude_mv=5000, memsize=0)
+        
+        # Load the block pulse geometry into the card's memory
+        self.load_block_pulse(pulse_width_s, total_duration_s, sample_rate_hz)
+    
     def load_block_pulse(self, pulse_width_s, total_duration_s, sample_rate_hz):
         pulse_samples = max(1, int(pulse_width_s * sample_rate_hz))
         total_samples = int(total_duration_s * sample_rate_hz)
