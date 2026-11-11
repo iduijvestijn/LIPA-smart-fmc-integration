@@ -3,12 +3,14 @@ Automated Scanning Routine
 Integrates the KDC101 stage with the Spectrum AWG and DAQ multi-recording.
 """
 # %%
+import os 
 import time
 import numpy as np
 import spcm
 from spcm import units
 import matplotlib.pyplot as plt
 from scipy.signal import hilbert
+import h5py  # Added for LIPA-IO saving
 
 from instruments.thorlabs_kdc101 import KDC101
 from instruments.m2p6576_awg import SpectrumAWG
@@ -17,6 +19,12 @@ from instruments.m2p5943_daq import SpectrumDAQ
 # =============================================================================
 # 1. MEASUREMENT PARAMETERS (only edit this section)
 # =============================================================================
+# --- Data Saving -------------------------------------------------------------
+SAVE_DATA = True
+# Options: later will ad 'semi_raw' (the averaged blocks), 'avg' (the single overall average)
+SAVE_FORMATS = ['semi_raw']
+FILE_PREFIX = "data_spm"
+SAVE_DIR = r"C:\LIPA_Project\LIPA_Data"  # Directory to save the HDF5 files. Ensure this exists or change to a valid path.
 
 # --- Cards -------------------------------------------------------------------
 AWG_DEVICE = '/dev/spcm0'               # card that generates the trigger pulse and the pulse train
@@ -25,7 +33,7 @@ STAGE_SERIAL = "27266437"               # stage serial number for the scanning
 
 
 # --- Scanning ---
-SCAN_POSITIONS_MM = np.arange(0.0, 11.0, 0.5)  # Positions to sweep
+SCAN_POSITIONS_MM = np.arange(6, 12.0, 0.2)  # Positions to sweep
 SETTLING_TIME_S = 0.1  # Time to wait after moving the stage before triggering data acquisition
 
 # --- AWG general -------------------------------------------------------------
@@ -277,7 +285,41 @@ def main():
             print("No data collected. Exiting.")
             return
             
-         # [Data saving logic using `semi_raw_dataset` goes here]
+        # ---------------------------------------------------------------------
+        # LIPA-IO DATA SAVING
+        # ---------------------------------------------------------------------
+        if SAVE_DATA:
+            filename = f"{FILE_PREFIX}_{time.strftime('%Y%m%d_%H%M%S')}.h5"
+            filepath = os.path.join(SAVE_DIR, filename)
+            print(f"\nSaving data to {filepath}...")
+            
+            with h5py.File(filepath, 'w') as h5f:
+                # Root Metadata (SPM Global Parameters)
+                h5f.attrs["operator"] = "User"
+                h5f.attrs["date"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                h5f.attrs["awg_sample_rate_hz"] = AWG_SAMPLE_RATE.magnitude
+                h5f.attrs["daq_sample_rate_hz"] = DAQ_SAMPLE_RATE.magnitude
+                h5f.attrs["averages_per_position"] = NUMBER_OF_ASCANS
+                h5f.attrs["semi_raw_blocks"] = num_semi_raw
+                h5f.attrs["averaging_block_size"] = AVERAGING_BLOCK_SIZE
+                
+                # Shared time axis dataset
+                h5f.create_dataset("time_axis_s", data=time_us / 1e6)
+                
+                # Sequences (Stage Positions)
+                for i in range(completed_positions):
+                    seq_group = h5f.create_group(f"Sequence_{i:03d}")
+                    seq_group.attrs["stage_position_mm"] = SCAN_POSITIONS_MM[i]
+                    
+                    # Acquisitions based on requested formats
+                    #if 'raw' in SAVE_FORMATS:
+                        #seq_group.create_dataset("a_scan_raw", data=raw_dataset[i, :, :])
+                    if 'semi_raw' in SAVE_FORMATS:
+                        seq_group.create_dataset("a_scan_semi_raw", data=semi_raw_dataset[i, :, :])
+                    #if 'avg' in SAVE_FORMATS:
+                        #seq_group.create_dataset("a_scan_avg", data=b_scan_image[i, :])
+                        
+            print("Data saving complete.")
         
         # ---------------------------------------------------------------------
         # POST-PROCESSING: FILTERING & ENVELOPE
