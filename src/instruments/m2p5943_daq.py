@@ -10,55 +10,67 @@ class SpectrumDAQ:
         self.card = spcm.Card(resource_path)
         self.card.__enter__()
         
-        self.data_transfer = None
+        self.multi = None
         self.channels = None
 
-    def configure_trigger_receiver(self, sample_rate_hz, ch0_mv, ch1_mv, record_time_s, post_trigger_s, trigger_level_mv):
-        self.card.card_mode(spcm.SPC_REC_STD_SINGLE)
-        self.card.timeout(5 * units.s)
+    def configure_multi_recording(self, sample_rate, num_segments, timeout,
+                                  ch_ranges, ch_terminations, offset, 
+                                  trigger_ch, trigger_mode, trigger_level):
+        
+        self.card.card_mode(spcm.SPC_REC_STD_MULTI)
+        self.card.timeout(timeout)
         
         clock = spcm.Clock(self.card)
         clock.mode(spcm.SPC_CM_INTPLL)
-        clock.sample_rate(sample_rate_hz * units.Hz)
+        clock.sample_rate(sample_rate)
         
-        self.channels = spcm.Channels(self.card, card_enable=spcm.CHANNEL0 | spcm.CHANNEL1)
-        self.channels[0].amp(ch0_mv * units.mV)
-        self.channels[1].amp(ch1_mv * units.mV)
-        self.channels.termination(1)  # 50 ohms termination
+        # Enable CH0, CH1, CH2, CH3 (must be powers of 2, so 4 channels enabled)
+        self.channels = spcm.Channels(self.card, card_enable=spcm.CHANNEL0 | spcm.CHANNEL1 | spcm.CHANNEL2 | spcm.CHANNEL3)
         
-        # Trigger on DAQ CH0
+        for i, (amp, term) in enumerate(zip(ch_ranges, ch_terminations)):
+            self.channels[i].amp(amp)
+            self.channels[i].termination(term)
+        self.channels.offset(offset)
+        
+        # Trigger Setup
         trigger = spcm.Trigger(self.card)
         trigger.or_mask(spcm.SPC_TMASK_NONE)
         trigger.and_mask(spcm.SPC_TMASK_NONE)
-        trigger.ch_or_mask0(spcm.SPC_TMASK0_CH0)
+        trigger.ch_or_mask0(spcm.SPC_TMASK0_CH0) # Hardcoded to CH0 mapping to DAQ CH1
         trigger.ch_and_mask0(0)
-        trigger.ch_mode(self.channels[0], spcm.SPC_TM_POS)
-        
-        # APPLY THE EXACT THRESHOLD IN MILLIVOLTS
-        trigger.ch_level0(self.channels[0], trigger_level_mv * units.mV)
-        
-        self.data_transfer = spcm.DataTransfer(self.card)
-        self.data_transfer.duration(record_time_s * units.s, post_trigger_duration=post_trigger_s * units.s)
+        trigger.ch_mode(self.channels[trigger_ch], trigger_mode)
+        trigger.ch_level0(self.channels[trigger_ch], trigger_level)
 
-    def read_data(self):
-        # Pull the data from the card to the PC RAM
-        self.data_transfer.start_buffer_transfer(spcm.M2CMD_DATA_STARTDMA)
-        
-        # Convert internal binary to actual Voltage arrays
-        ch0_data = self.channels[0].convert_data(self.data_transfer.buffer[self.channels[0], :], units.V)
-        ch1_data = self.channels[1].convert_data(self.data_transfer.buffer[self.channels[1], :], units.V)
-        
-        # Strip the pint units so standard NumPy arrays are returned
-        ch0_v = getattr(ch0_data, 'magnitude', ch0_data)
-        ch1_v = getattr(ch1_data, 'magnitude', ch1_data)
-        
-        return ch0_v, ch1_v
+    def allocate_multi_buffer(self, num_segments, segment_samples, post_samples):
+        # Ensure memory is a multiple of 32
+        segment_samples = -(-segment_samples // 32) * 32
+        post_samples = -(-post_samples // 32) * 32
 
-    def arm_and_wait(self):
+        self.multi = spcm.Multi(self.card)
+        self.multi.memory_size(num_segments * segment_samples)
+        self.multi.allocate_buffer(segment_samples=segment_samples, num_segments=num_segments)
+        self.multi.post_trigger(post_samples)
+
+    def arm(self):
         self.card.start(spcm.M2CMD_CARD_ENABLETRIGGER)
 
     def wait_ready(self):
         self.card.cmd(spcm.M2CMD_CARD_WAITREADY)
+
+    def read_all_data(self, used_channels, num_segments, segment_samples):
+        self.multi.start_buffer_transfer(spcm.M2CMD_DATA_STARTDMA, spcm.M2CMD_DATA_WAITDMA)
+        
+        time_data_array = np.empty((len(used_channels), num_segments, segment_samples))
+        for n_channel, daq_channel_idx in enumerate(used_channels):
+            channel = self.channels[daq_channel_idx]
+            raw = self.multi.buffer[..., channel]
+            data_V = channel.convert_data(raw, units.V)
+            
+            # Strip pint units for standard numpy compatibility
+            v_mag = getattr(data_V, 'magnitude', data_V)
+            time_data_array[n_channel] = np.asarray(v_mag).reshape(num_segments, segment_samples)
+            
+        return time_data_array
 
     def close(self):
         if self.card:
