@@ -33,7 +33,7 @@ STAGE_SERIAL = "27266437"               # stage serial number for the scanning
 
 
 # --- Scanning ---
-SCAN_POSITIONS_MM = np.arange(6, 12.0, 0.2)  # Positions to sweep
+SCAN_POSITIONS_MM = np.arange(0.0, 12.0, 0.2)  # Positions to sweep
 SETTLING_TIME_S = 0.1  # Time to wait after moving the stage before triggering data acquisition
 
 # --- AWG general -------------------------------------------------------------
@@ -295,8 +295,8 @@ def main():
             
             with h5py.File(filepath, 'w') as h5f:
                 # Root Metadata (SPM Global Parameters)
-                h5f.attrs["operator"] = "User"
-                h5f.attrs["date"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                h5f.attrs["operator"] = "Igor"
+                h5f.attrs["date"] = time.strftime("%Y-%m-%d_%H:%M:%S")
                 h5f.attrs["awg_sample_rate_hz"] = AWG_SAMPLE_RATE.magnitude
                 h5f.attrs["daq_sample_rate_hz"] = DAQ_SAMPLE_RATE.magnitude
                 h5f.attrs["averages_per_position"] = NUMBER_OF_ASCANS
