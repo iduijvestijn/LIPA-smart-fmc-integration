@@ -19,21 +19,21 @@ def main():
     DAQ_DEVICE = '/dev/spcm1'              
 
     # --- Trigger pulse (Spectrum AWG, CH0) ---
-    AWG_SAMPLE_RATE = 10 * units.MHz        
-    PULSE_WIDTH = 5 * units.us              
-    AWG_WAVEFORM_DURATION = 50 * units.us   
+    AWG_SAMPLE_RATE = 10e6 * units.Hz        # 10 MHz
+    PULSE_WIDTH = 5e-6 * units.s             # 5 µs
+    AWG_WAVEFORM_DURATION = 50e-6 * units.s  # 50 µs
     AWG_AMPLITUDE = 0.5 * units.V           
-    PULSE_LEVEL_FRACTION = 1.0              
+    PULSE_LEVEL_FRACTION = 1.0             
 
     # --- DAQ input channels ---
     DAQ_CH0_RANGE = 2 * units.V             
     DAQ_CH1_RANGE = 2 * units.V             
     
     # --- DAQ clock and recording window ---
-    DAQ_SAMPLE_RATE = 80 * units.MHz        
-    RECORD_DURATION = 120 * units.us        
-    POST_TRIGGER_DURATION = 100 * units.us  
-
+    DAQ_SAMPLE_RATE = 80e6 * units.Hz        # 80 MHz
+    RECORD_DURATION = 120e-6 * units.s       # 120 µs
+    POST_TRIGGER_DURATION = 100e-6 * units.s # 100 µs
+    
     # --- DAQ trigger (on DAQ CH0) ---
     TRIGGER_LEVEL_FRACTION = 0.5            
 
@@ -63,16 +63,16 @@ def main():
         )
 
         pulse_height = PULSE_LEVEL_FRACTION * AWG_AMPLITUDE
-        trigger_level_mv = (TRIGGER_LEVEL_FRACTION * pulse_height).to(units.mV).magnitude
+        trigger_level_v = (TRIGGER_LEVEL_FRACTION * pulse_height).to(units.V).magnitude
 
         print("Configuring DAQ...")
         daq.configure_trigger_receiver(
-            sample_rate_hz=DAQ_SAMPLE_RATE.to(units.Hz).magnitude, 
-            ch0_mv=DAQ_CH0_RANGE.to(units.mV).magnitude, 
-            ch1_mv=DAQ_CH1_RANGE.to(units.mV).magnitude, 
-            record_time_s=RECORD_DURATION.to(units.s).magnitude, 
-            post_trigger_s=POST_TRIGGER_DURATION.to(units.s).magnitude, 
-            trigger_level_mv=trigger_level_mv  # Pass the corrected value here
+            sample_rate_hz=DAQ_SAMPLE_RATE.magnitude, 
+            ch0_v=DAQ_CH0_RANGE.magnitude, 
+            ch1_v=DAQ_CH1_RANGE.magnitude, 
+            record_time_s=RECORD_DURATION.magnitude, 
+            post_trigger_s=POST_TRIGGER_DURATION.magnitude, 
+            trigger_level_v=trigger_level_v  
         )
 
         # =========================================================================
